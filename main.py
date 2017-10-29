@@ -10,17 +10,30 @@ def main():
     course = session.choose_course()
 
     print(course.filename)
-    print(course.dump_all())
+    course.print_students()
 
+    # Get student pairs and history matrix
     pairs = course.gen_pairs()
-
     matrix = course.gen_history_matrix()
 
-    for a, b in pairs:
-        print(a, b, end=" ")
-        print(matrix[a][b])
+    # Print matrix
+    for row in matrix:
+        print(row)
+
+    # Show all pairs and number of times pair has been together
+    find_groups(pairs, matrix)
 
     course.save()
+
+
+def find_groups(pairs, matrix):
+    # Prints sets of groups with the cost of each group
+    # Does not ignore repeated groups (0,1 + 2,3 vs 2,3 + 0,1)
+    for a, b in pairs:
+        print(a, b, matrix[a][b])
+        new_pairs = [(c, d) for c, d in pairs if c != a and c != b and d != a and d != b]
+        find_groups(new_pairs, matrix)
+        print("---")
 
 
 class Student:
@@ -62,7 +75,7 @@ class Course:
             for student in self.course_roster:
                 outfile.writelines(student.save_record() + "\n")
 
-    def dump_all(self):
+    def print_students(self):
         for student in self.course_roster:
             print(student.index, student.name())
 
