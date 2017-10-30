@@ -1,5 +1,6 @@
 import itertools
 import os
+import random
 
 
 def main():
@@ -9,31 +10,76 @@ def main():
     # Select course
     course = session.choose_course()
 
+    matrix = course.gen_history_matrix()
+
     print(course.filename)
     course.print_students()
 
-    # Get student pairs and history matrix
-    pairs = course.gen_pairs()
-    matrix = course.gen_history_matrix()
+    possible_groups = {}
 
-    # Print matrix
-    for row in matrix:
-        print(row)
+    pair_permutations = itertools.permutations(course.student_indices())
+    for permutation in pair_permutations:
+        pairs = chunks(permutation, 2)
+        group_set = []
+        score = 0
+        for pair in pairs:
+            a, b = pair
+            score += matrix[a][b]
+            if a < b:
+                pair = (a, b)
+            else:
+                pair = (b, a)
+            group_set.append(pair)
 
-    # Show all pairs and number of times pair has been together
-    find_groups(pairs, matrix)
+        possible_groups[flatten(group_set)] = score
 
-    course.save()
+    # Find minimum cost for group
+    min_cost = min(possible_groups.values())
+
+    # Select all possible permutations of groups with minimum cost
+    best_options = [k for k, v in possible_groups.items() if v == min_cost]
+
+    # Choose a random possible set of groups from the best options
+    chosen_groups = random.choice(best_options)
+    print(chosen_groups)
+
+    # Convert from string to list of tuples of ints
+    final_groups = []
+    for p in chosen_groups.split("."):
+        try:
+            a, b = p.split(",")
+        except ValueError:
+            break
+        pair = (int(a),int(b))
+        final_groups.append(pair)
+    print(final_groups)
+
+    # Convert from student indices to names
+    for group in final_groups:
+        a, b = group
+        print(course.course_roster[a].name()
+              + " and "
+              + course.course_roster[b].name())
 
 
-def find_groups(pairs, matrix):
-    # Prints sets of groups with the cost of each group
-    # Does not ignore repeated groups (0,1 + 2,3 vs 2,3 + 0,1)
-    for a, b in pairs:
-        print(a, b, matrix[a][b])
-        new_pairs = [(c, d) for c, d in pairs if c != a and c != b and d != a and d != b]
-        find_groups(new_pairs, matrix)
-        print("---")
+def flatten(list):
+    flat_list = ""
+    for tup in list:
+        a, b = tup
+        flat_list += str(a) + ","
+        flat_list += str(b) + "."
+    return flat_list
+
+
+def chunks(l, n):
+    """Yield successive n-sized chunks from l."""
+    for i in range(0, len(l), n):
+        yield l[i:i + n]
+
+
+def sub_groups(pair, pairs):
+    a, b = pair
+    return [(c, d) for c, d in pairs if c != a and c != b and d != a and d != b]
 
 
 class Student:
@@ -78,6 +124,9 @@ class Course:
     def print_students(self):
         for student in self.course_roster:
             print(student.index, student.name())
+
+    def student_indices(self):
+        return [student.index for student in self.course_roster]
 
     def gen_pairs(self):
         # Returns a list of all possible pairs of students in the class by index
