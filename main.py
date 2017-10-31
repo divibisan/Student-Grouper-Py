@@ -10,71 +10,74 @@ def main():
     # Select course
     course = session.choose_course()
 
+    # Get matrix of cost
     matrix = course.gen_history_matrix()
 
-    print(course.filename)
-    course.print_students()
+    class_size = 8
+    group_size = 2
 
-    possible_groups = {}
+    group_sizes = [3,3,2]
 
+    # Generate all possible permutations of students
     pair_permutations = itertools.permutations(course.student_indices())
-    for permutation in pair_permutations:
-        pairs = chunks(permutation, 2)
-        group_set = []
-        score = 0
-        for pair in pairs:
-            a, b = pair
-            score += matrix[a][b]
-            if a < b:
-                pair = (a, b)
-            else:
-                pair = (b, a)
-            group_set.append(pair)
 
-        possible_groups[flatten(group_set)] = score
+    # Cut those permutations into groups of specified sizes
+    grouped_permutations = cast_into_chunks(pair_permutations, group_sizes)
 
-    # Find minimum cost for group
-    min_cost = min(possible_groups.values())
+    # Find all groups with the lowest possible score
+    best_groups = find_best_groups(grouped_permutations, matrix)
 
-    # Select all possible permutations of groups with minimum cost
-    best_options = [k for k, v in possible_groups.items() if v == min_cost]
+    # Randomly choose one set of groups from the best groups
+    final_groups = random.choice(best_groups)
 
-    # Choose a random possible set of groups from the best options
-    chosen_groups = random.choice(best_options)
-    print(chosen_groups)
-
-    # Convert from string to list of tuples of ints
-    final_groups = []
-    for p in chosen_groups.split("."):
-        try:
-            a, b = p.split(",")
-        except ValueError:
-            break
-        pair = (int(a),int(b))
-        final_groups.append(pair)
-    print(final_groups)
-
-    # Convert from student indices to names
+    # Print names of group members
     for group in final_groups:
-        a, b = group
-        print(course.course_roster[a].name()
-              + " and "
-              + course.course_roster[b].name())
+        print(" + ".join(course.indices_to_names(group)))
 
 
-def flatten(list):
-    flat_list = ""
-    for tup in list:
-        a, b = tup
-        flat_list += str(a) + ","
-        flat_list += str(b) + "."
-    return flat_list
+def find_best_groups(permutations, matrix):
+    # Loop through each possible set of groups and calculate its score
+    best_groups = []
+    min_score = 99999
+    for set_of_groups in permutations:
+        score = 0
+        for group in set_of_groups:
+            # Generate all pair-combinations of students in each group
+            #  and add the cost of that pairing
+            group_combinations = itertools.combinations(group, 2)
+            for a, b in group_combinations:
+                score += matrix[a][b]
+        # Score now contains the total score for the entire set of groups
+        # Only keep sets of groups whose score is <= to the lowest found score
+        if score == min_score:
+            best_groups.append(set_of_groups)
+        elif score < min_score:
+            # If new group has lower score:
+            #  update min_score
+            #  clear best groups, and then add new group
+            min_score = score
+            best_groups = [set_of_groups]
+    return best_groups
 
 
-def chunks(l, n):
-    """Yield successive n-sized chunks from l."""
-    for i in range(0, len(l), n):
-        yield l[i:i + n]
+def cast_into_chunks(data, chunk_sizes):
+    # Loop through list of permutations
+    for row in data:
+        # Convert from tuple to list
+        permutation = list(row)
+        list_of_groups = []
+        # Loop through each listed group size
+        for chunk_size in chunk_sizes:
+            group = []
+            # Pop "chunk_size" number of indices from the front
+            #  of the permutation and add to list
+            for i in range(chunk_size):
+                group.append(permutation.pop(0))
+            # Append that chunk to the list of groups
+            list_of_groups.append(group)
+        yield list_of_groups
+
+
 
 
 def sub_groups(pair, pairs):
@@ -143,6 +146,12 @@ class Course:
             matrix.append(student.history)
         return matrix
 
+    def indices_to_names(self, group):
+        names = []
+        for index in group:
+            names.append(self.course_roster[index].name())
+        return names
+
 
 class Session:
     def __init__(self, directory):
@@ -162,7 +171,7 @@ class Session:
                 print(str(index) + ") " + file)
 
             # Get user's choice
-            choice = input()
+            choice = "0"
 
             if choice.startswith("q"):
                 quit()
