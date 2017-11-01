@@ -10,25 +10,8 @@ def main():
     # Select course
     course = session.choose_course()
 
-    # Get matrix of cost
-    matrix = course.gen_history_matrix()
-
-    class_size = 8
-    group_size = 2
-
-    group_sizes = [3,3,2]
-
-    # Generate all possible permutations of students
-    pair_permutations = itertools.permutations(course.student_indices())
-
-    # Cut those permutations into groups of specified sizes
-    grouped_permutations = cast_into_chunks(pair_permutations, group_sizes)
-
-    # Find all groups with the lowest possible score
-    best_groups = find_best_groups(grouped_permutations, matrix)
-
-    # Randomly choose one set of groups from the best groups
-    final_groups = random.choice(best_groups)
+    # Make groups
+    final_groups = course.make_groups(3, "n")
 
     # Print names of group members
     for group in final_groups:
@@ -76,8 +59,6 @@ def cast_into_chunks(data, chunk_sizes):
             # Append that chunk to the list of groups
             list_of_groups.append(group)
         yield list_of_groups
-
-
 
 
 def sub_groups(pair, pairs):
@@ -152,6 +133,62 @@ class Course:
             names.append(self.course_roster[index].name())
         return names
 
+    def group_list_by_size(self, group_size):
+        # Returns a list of the group sizes to be generated,
+        #   given a desired group SIZE
+        #   If class doesn't divide evenly, it will make groups larger
+        class_size = len(self.course_roster)
+        list_of_groups = []
+        # Integer division, floor
+        num_groups = class_size // group_size
+        remainder = class_size % group_size
+        for i in range(num_groups):
+            list_of_groups.append(group_size)
+        for i in range(remainder):
+            list_of_groups[i] += 1
+        return list_of_groups
+
+    def group_list_by_number(self, num_groups):
+        """ Returns a list of the group sizes to be generated,
+        given a desired NUMBER of groups.
+        If class doesn't divide evenly it will make the groups larger
+        """
+        class_size = len(self.course_roster)
+        list_of_groups = []
+        # Integer division, floor
+        group_size = class_size // num_groups
+        remainder = class_size % num_groups
+        for i in range(num_groups):
+            list_of_groups.append(group_size)
+        for i in range(remainder):
+            list_of_groups[i] += 1
+        return list_of_groups
+
+    def make_groups(self, group_val, group_by):
+
+
+        # Get matrix of cost
+        matrix = self.gen_history_matrix()
+
+        group_sizes = []
+        if group_by.startswith("s"):
+            group_sizes = self.group_list_by_size(group_val)
+        elif group_by.startswith("n"):
+            group_sizes = self.group_list_by_number(group_val)
+
+        print(group_sizes)
+
+        # Generate all possible permutations of students
+        pair_permutations = itertools.permutations(self.student_indices())
+
+        # Cut those permutations into groups of specified sizes
+        grouped_permutations = cast_into_chunks(pair_permutations, group_sizes)
+
+        # Find all groups with the lowest possible score
+        best_groups = find_best_groups(grouped_permutations, matrix)
+
+        # Randomly choose one set of groups from the best groups
+        return random.choice(best_groups)
 
 class Session:
     def __init__(self, directory):
