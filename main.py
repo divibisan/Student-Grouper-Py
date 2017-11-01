@@ -5,6 +5,7 @@ import random
 
 def main():
     # Create new session
+    # noinspection SpellCheckingInspection
     session = Session("classfiles")
 
     # Select course
@@ -19,7 +20,14 @@ def main():
 
 
 def find_best_groups(permutations, matrix):
-    # Loop through each possible set of groups and calculate its score
+    """Loop through each possible set of groups and calculate its score,
+    given the supplied cost matrix.
+
+    :param permutations: A list containing a lists of possible sets of groups
+    :param matrix: The cost matrix for pairs of students
+    :returns: A list of all possible sets of groups with the lowest score
+        out of all possible sets
+    """
     best_groups = []
     min_score = 99999
     for set_of_groups in permutations:
@@ -44,6 +52,13 @@ def find_best_groups(permutations, matrix):
 
 
 def cast_into_chunks(data, chunk_sizes):
+    """Loop through list, divide list into list of lists of given sizes.
+
+    :param data: a list of lists or tuples to be divided into sub-groups
+    :param chunk_sizes: a list, each element is the size of the sub-groups
+    :returns: A list of possible sets of groups,
+        each of which is a list (a set of groups) of lists (groups) of students
+    """
     # Loop through list of permutations
     for row in data:
         # Convert from tuple to list
@@ -61,13 +76,14 @@ def cast_into_chunks(data, chunk_sizes):
         yield list_of_groups
 
 
-def sub_groups(pair, pairs):
-    a, b = pair
-    return [(c, d) for c, d in pairs if c != a and c != b and d != a and d != b]
-
-
 class Student:
+    """Hold information on a single student"""
+
     def __init__(self, record):
+        """Load a student record from a comma separated text line
+
+        :param record: a comma separated text line
+        """
         x = record.strip().split(",")
         self.index = int(x[0])
         self.firstName = x[1]
@@ -75,18 +91,24 @@ class Student:
         self.history = [int(num) for num in x[3:]]
 
     def name(self):
+        """Return full name by merging first and last"""
         return self.firstName + " " + self.lastName
 
     def save_record(self):
-        # Generates comma separated record ready to be written to save file
+        """Return comma separated record ready to be written to save file"""
         history_joined = ",".join([str(x) for x in self.history])
         return ",".join([str(self.index), self.firstName,
                          self.lastName, history_joined])
 
 
 class Course:
+    """Course objects hold all student objects loaded from one save file"""
+
     def __init__(self, filename):
-        # Generates a new Course object from a save file
+        """Load save file and generate new course object
+
+        :param filename: filename for save file
+        """
         self.filename = filename
         self.course_roster = []
         self.desc = ""
@@ -99,74 +121,104 @@ class Course:
                     self.course_roster.append(student)
 
     def save(self):
+        """Write course object to save file.
+
+        Each course object save the filename from the file it was loaded from
+        and then saves itself to that same file
+        """
         # Writes the Course object to a save file
         with open(file=self.filename, mode="w") as outfile:
             outfile.writelines("#" + self.desc + "\n")
             for student in self.course_roster:
                 outfile.writelines(student.save_record() + "\n")
 
-    def print_students(self):
+    def return_students(self):
+        """Make list of (index, full names) of all students in course
+
+        :return: List of tuples, each contains 1 student index + full name
+        """
+        students = []
         for student in self.course_roster:
-            print(student.index, student.name())
+            # Make tuple of index + fullname and add to list
+            students.append((student.index, student.name()))
+        return students
 
     def student_indices(self):
+        """Return list containing indices of all students
+
+        :return: list containing indices of all students
+        """
         return [student.index for student in self.course_roster]
 
-    def gen_pairs(self):
-        # Returns a list of all possible pairs of students in the class by index
-        indices = [student.index for student in self.course_roster]
-        # return all unique pairs, order doesn't matter (a,b = b,a)
-        #  excludes a-a pairs
-        #  and b-a pairs if a-b has already been added
-        return [pair for pair in itertools.product(indices, repeat=2)
-                if pair[0] < pair[1]]
-
     def gen_history_matrix(self):
+        """Make matrix showing # times each student was paired with each other
+
+        :return: n x n matrix (n = number of students in course),
+        matrix[m][n] = the number of times students m and n have worked together
+        """
         matrix = []
         for student in self.course_roster:
             matrix.append(student.history)
         return matrix
 
     def indices_to_names(self, group):
+        """Return list of names of students from a list of indices
+
+        :param group: A list of indices for group members
+        :return: A list of the full names of students in that group
+        """
         names = []
         for index in group:
             names.append(self.course_roster[index].name())
         return names
 
     def group_list_by_size(self, group_size):
-        # Returns a list of the group sizes to be generated,
-        #   given a desired group SIZE
-        #   If class doesn't divide evenly, it will make groups larger
+        """Returns list of the group sizes to be generated, based on group SIZE
+
+        If class doesn't divide evenly, it will make groups larger
+        :param group_size: The desired size of the groups
+        :return: List containing the sizes of the groups to be made
+        """
         class_size = len(self.course_roster)
-        list_of_groups = []
+        list_of_group_sizes = []
         # Integer division, floor
         num_groups = class_size // group_size
         remainder = class_size % group_size
         for i in range(num_groups):
-            list_of_groups.append(group_size)
+            list_of_group_sizes.append(group_size)
         for i in range(remainder):
-            list_of_groups[i] += 1
-        return list_of_groups
+            list_of_group_sizes[i] += 1
+        return list_of_group_sizes
 
     def group_list_by_number(self, num_groups):
-        """ Returns a list of the group sizes to be generated,
-        given a desired NUMBER of groups.
-        If class doesn't divide evenly it will make the groups larger
+        """Returns list of the group sizes to be generated, based on # of groups
+
+        If class doesn't divide evenly, it will make groups larger
+        :param num_groups: The desired number of groups
+        :return: List containing the sizes of the groups to be made
         """
         class_size = len(self.course_roster)
-        list_of_groups = []
+        list_of_group_sizes = []
         # Integer division, floor
         group_size = class_size // num_groups
         remainder = class_size % num_groups
         for i in range(num_groups):
-            list_of_groups.append(group_size)
+            list_of_group_sizes.append(group_size)
         for i in range(remainder):
-            list_of_groups[i] += 1
-        return list_of_groups
+            list_of_group_sizes[i] += 1
+        return list_of_group_sizes
 
     def make_groups(self, group_val, group_by):
+        """Make groups of students with lowest possible cost
 
+        Can either generate groups by size or number of groups.
+        Picks optimal group based on this course's gen_history_matrix() method
+        If multiple sets of groups have equal cost, pick one at random
 
+        :param group_val: Either the desired SIZE of group or NUMBER of groups
+        :param group_by: If "s" use group_list_by_size, if "n" use ..._by_number
+        :return: List of groups, each is a list of indices for its members
+        """
         # Get matrix of cost
         matrix = self.gen_history_matrix()
 
@@ -175,8 +227,6 @@ class Course:
             group_sizes = self.group_list_by_size(group_val)
         elif group_by.startswith("n"):
             group_sizes = self.group_list_by_number(group_val)
-
-        print(group_sizes)
 
         # Generate all possible permutations of students
         pair_permutations = itertools.permutations(self.student_indices())
@@ -190,12 +240,24 @@ class Course:
         # Randomly choose one set of groups from the best groups
         return random.choice(best_groups)
 
+
 class Session:
+    """Program session, contains UI methods
+
+    """
+
     def __init__(self, directory):
-        # This is the directory in which to look for course files
+        """Initialize new session
+
+        :param directory: the file directory which holds save files
+        """
         self.directory = directory
 
     def choose_course(self):
+        """UI to choose a course from the save files in the specified directory
+
+        :return: A new Course object generate based on selected file
+        """
         # Continue looping until user chooses a class or enters quit
         while True:
             print("Choose a class to load:")
@@ -208,13 +270,16 @@ class Session:
                 print(str(index) + ") " + file)
 
             # Get user's choice
-            choice = "0"
+            choice = input()
 
             if choice.startswith("q"):
                 quit()
             # If selected index is valid, load the course and return object
             elif int(choice) < len(course_file):
-                return Course(self.directory + "/" + course_file[index])
+                return Course(self.directory + "/" + course_file[int(choice)])
 
 
-main()
+# Run main function
+if __name__ == "__main__":
+    main()
+
