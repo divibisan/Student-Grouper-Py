@@ -12,7 +12,7 @@ def main():
     course = session.choose_course()
 
     # Make groups
-    final_groups = course.make_groups(3, "n")
+    final_groups = course.make_groups(4, "s")
 
     # Print names of group members
     for group in final_groups:
@@ -175,7 +175,10 @@ class Course:
     def group_list_by_size(self, group_size):
         """Returns list of the group sizes to be generated, based on group SIZE
 
-        If class doesn't divide evenly, it will make groups larger
+        If class doesn't divide evenly, a new, smaller group will be created
+         unless only there is only one remainder,
+         or the new group will be 2+ smaller than the desired group
+         in which case the remainder will be divided between existing groups
         :param group_size: The desired size of the groups
         :return: List containing the sizes of the groups to be made
         """
@@ -186,8 +189,11 @@ class Course:
         remainder = class_size % group_size
         for i in range(num_groups):
             list_of_group_sizes.append(group_size)
-        for i in range(remainder):
-            list_of_group_sizes[i] += 1
+        if remainder == 1 or group_size-remainder > 1:
+            for i in range(remainder):
+                list_of_group_sizes[i] += 1
+        else:
+            list_of_group_sizes.append(remainder)
         return list_of_group_sizes
 
     def group_list_by_number(self, num_groups):
@@ -256,7 +262,7 @@ class Session:
     def choose_course(self):
         """UI to choose a course from the save files in the specified directory
 
-        :return: A new Course object generate based on selected file
+        :return: A new Course object generated based on selected file
         """
         # Continue looping until user chooses a class or enters quit
         while True:
