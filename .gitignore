@@ -1,3 +1,4 @@
 *.xml
 .idea/Student Grouper Py.iml
 classfiles/class1.txt
+.DS_Store

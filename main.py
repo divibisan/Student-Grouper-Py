@@ -7,16 +7,16 @@ def main():
     # Create new session
     # noinspection SpellCheckingInspection
     session = Session("classfiles")
-
+    session.main_menu()
     # Select course
-    course = session.choose_course()
+    # course = session.choose_course()
 
     # Make groups
-    final_groups = course.make_groups(4, "s")
+    # final_groups = course.make_groups(4, "s")
 
     # Print names of group members
-    for group in final_groups:
-        print(" + ".join(course.indices_to_names(group)))
+    # for group in final_groups:
+    #    print(" + ".join(course.indices_to_names(group)))
 
 
 def find_best_groups(permutations, matrix):
@@ -37,7 +37,7 @@ def find_best_groups(permutations, matrix):
             #  and add the cost of that pairing
             group_combinations = itertools.combinations(group, 2)
             for a, b in group_combinations:
-                score += matrix[a][b]
+                score += int(matrix[a][b])
         # Score now contains the total score for the entire set of groups
         # Only keep sets of groups whose score is <= to the lowest found score
         if score == min_score:
@@ -79,16 +79,23 @@ def cast_into_chunks(data, chunk_sizes):
 class Student:
     """Hold information on a single student"""
 
-    def __init__(self, record):
+    def __init__(self, record, course=None):
         """Load a student record from a comma separated text line
 
         :param record: a comma separated text line
         """
-        x = record.strip().split(",")
-        self.index = int(x[0])
-        self.firstName = x[1]
-        self.lastName = x[2]
-        self.history = [int(num) for num in x[3:]]
+        if not course:
+            x = record.strip().split(",")
+            self.index = int(x[0])
+            self.firstName = x[1]
+            self.lastName = x[2]
+            self.history = [int(num) for num in x[3:]]
+        else:
+            x = record.strip().split(" ")
+            self.firstName = x[0]
+            self.lastName = x[1]
+            self.index = len(course.course_roster)
+            self.history = [int(num) for num in "0" * len(course.course_roster)]
 
     def name(self):
         """Return full name by merging first and last"""
@@ -104,16 +111,34 @@ class Student:
 class Course:
     """Course objects hold all student objects loaded from one save file"""
 
-    def __init__(self, filename):
+    def __init__(self, filename, desc=""):
+        """
+        Create a new Course object:
+         1) by either loading a saved file (if filename exists)
+         2) or by creating a new one, which will be saved as filename
+
+        :param filename: Name for the save file for this course
+        :param [desc]: define course description when creating new course
+        """
+        self.course_roster = []
+        self.desc = desc
+        self.filename = filename
+
+        try:
+            fp = open(file=filename)
+            fp.close()
+            self.load_file(filename)
+        except FileNotFoundError:
+            print("New course created!")
+            self.save()
+
+    def load_file(self, filename):
         """Load save file and generate new course object
 
-        :param filename: filename for save file
+        :param filename: filename for save file to be loaded
         """
-        self.filename = filename
-        self.course_roster = []
-        self.desc = ""
-        with open(file=filename) as class_file:
-            for record in class_file:
+        with open(file=filename) as file:
+            for record in file:
                 if record.startswith("#"):
                     self.desc = record.strip().strip("#")
                 else:
@@ -142,6 +167,71 @@ class Course:
             # Make tuple of index + fullname and add to list
             students.append((student.index, student.name()))
         return students
+
+    def edit_students(self):
+        """Menu for editing students.
+
+        :return:
+        """
+        while True:
+            choice = input("1) Add Student\n"
+                           "2) List Students\n"
+                           "3) Remove Students\n\n"
+                           "S) Save Changes\n"
+                           "C) Cancel Changes\n")
+
+            if choice == "1":
+                # Add Students repeatedly until user breaks
+                while True:
+                    student = input("Enter Student Name (or Q to finish): ")
+                    if student.lower() == "q":
+                        break
+                    else:
+                        self.add_student(student)
+
+            if choice == "2":
+                # Print student names
+                [print(student[1]) for student in self.return_students()]
+
+            if choice == "3":
+                # Print student names with indices
+                [print(student[0] + ") " + student[1])
+                 for student in self.return_students()]
+                # Prompt for indices to delete
+                delete = input("Enter indices separated by commas to delete"
+                               "(or Q to finish): ")
+
+                if delete.lower() == "q":
+                    break
+                else:
+                    # Split list on comma, delete all students listed
+                    for index in delete.split(","):
+                        self.remove_student(index)
+
+            if choice.lower() == "s":
+                # Save course to file with changes
+                self.save()
+                break
+            if choice.lower() == "c":
+                # Reload course from file, deleting changes
+                self.load_file(self.filename)
+                break
+
+    def add_student(self, student):
+        """Generate new student from name and add to course_roster
+
+        :param student: Student name: "First Last"
+        """
+        # Generate new student
+        new_student = Student(student, course=self)
+        # Add to roster
+        self.course_roster.append(new_student)
+        # Expand history for all students in roster
+        for student in self.course_roster:
+            student.history.append("0")
+
+    def remove_student(self, student):
+        pass
 
     def student_indices(self):
         """Return list containing indices of all students
@@ -258,6 +348,71 @@ class Session:
         :param directory: the file directory which holds save files
         """
         self.directory = directory
+
+    def main_menu(self):
+        """Infinite loop that operates main menu"""
+        course = False
+        while True:
+            if course:
+                print(course.desc + " is loaded\n")
+            print("1) Load Course")
+            print("2) Add Course\n")
+            if course:
+                print("3) Make Groups")
+                print("4) Edit Course\n")
+            print("Q) Quit")
+
+            choice = input()
+
+            if choice == "1":
+                # Select course
+                course = self.choose_course()
+
+            elif choice == "2":
+                # Create new course
+                while True:
+                    # Get course description and generate file name from it
+                    desc = input("Enter course description:")
+                    file_name = desc.replace(" ", "_") + ".txt"
+                    # Check that filename doesn't already exist
+                    course_files = [file for file in os.listdir(self.directory)
+                                    if file.endswith(".txt")]
+                    if file_name not in course_files:
+                        # If it doesn't exist, break from loop and create course
+                        break
+                    else:
+                        print("A course with that name already exists."
+                              "Please modify the description")
+
+                # Make a new Course from filename and description
+                course = Course(self.directory + "/" + file_name, desc)
+                # Immediately edit students in course
+                course.edit_students()
+
+            elif choice == "3" and course:
+                # Make groups from loaded course
+
+                print("Define group by (S)ize or (N)umber?")
+                group_by = input().lower().split()[0]
+                if group_by == "s":
+                    print("Enter group size:")
+                elif group_by == "n":
+                    print("Enter number of groups")
+                group_val = int(input())
+                # Make groups
+                final_groups = course.make_groups(group_val, group_by)
+
+                # Print names of group members
+                for group in final_groups:
+                    print(" + ".join(course.indices_to_names(group)))
+                break
+
+            elif choice == "4" and course:
+                course.edit_students()
+
+            elif choice.lower().startswith("q"):
+                # Quit program
+                break
 
     def choose_course(self):
         """UI to choose a course from the save files in the specified directory
