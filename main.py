@@ -1,5 +1,5 @@
-from flask import Flask
-from session import *
+from flask import Flask, session, redirect, url_for
+from instance import *
 from course import *
 from student import *
 from functions import *
@@ -8,17 +8,24 @@ app = Flask(__name__)
 
 
 @app.route('/')
-def hello_world():
-    return 'Hello, World THIs is two!'
+def index():
+    if username in session:
 
+    else:
+
+
+@app.route('/user/<username>')
+def show_user_profile(username):
+    # show the user profile for that user
+    return 'User %s' % username
 
 def main():
-    # Create new session
-    # noinspection SpellCheckingInspection
-    session = Session("classfiles")
-    session.main_menu()
+    # Create new instance
+    # no inspection SpellCheckingInspection
+    instance = Instance("classfiles")
+    instance.main_menu()
     # Select course
-    # course = session.choose_course()
+    # course = instance.choose_course()
 
     # Make groups
     # final_groups = course.make_groups(4, "s")

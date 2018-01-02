@@ -2,7 +2,7 @@ import os
 from course import Course
 
 
-class Session:
+class Instance:
     """Program session, contains UI methods
 
     """
