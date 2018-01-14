@@ -1,4 +1,6 @@
 *.xml
 .idea/Student Grouper Py.iml
-classfiles/class1.txt
+classfiles/
 .DS_Store
+__pycache__
+.pyc
