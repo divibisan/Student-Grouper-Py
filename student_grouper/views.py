@@ -1,23 +1,21 @@
-from flask import Flask, session, redirect, url_for
-from instance import *
-from course import *
-from student import *
-from functions import *
-
-app = Flask(__name__)
+from student_grouper import app
+from flask import render_template
+# from student_grouper import instance
+# from student_grouper import course
+# from student_grouper import student
+# from student_grouper import functions
 
 
 @app.route('/')
 def index():
-    if username in session:
-
-    else:
+    return render_template("index.html")
 
 
 @app.route('/user/<username>')
 def show_user_profile(username):
     # show the user profile for that user
     return 'User %s' % username
+
 
 def main():
     # Create new instance

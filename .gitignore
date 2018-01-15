@@ -1,3 +1,6 @@
 *.xml
 .idea/Student Grouper Py.iml
-classfiles/class1.txt
+classfiles/
+__pycache__
+.DS_Store
+*.egg-info/
